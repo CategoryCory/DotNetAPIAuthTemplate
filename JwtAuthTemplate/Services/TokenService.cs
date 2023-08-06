@@ -1,5 +1,9 @@
-﻿using JwtAuthTemplate.Data.Models;
+﻿#nullable disable
+
+using JwtAuthTemplate.Configuration;
+using JwtAuthTemplate.Data.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -9,13 +13,13 @@ namespace JwtAuthTemplate.Services;
 
 public sealed class TokenService : ITokenService
 {
-    private readonly IConfiguration _config;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly JwtConfiguration _jwtConfig;
 
-    public TokenService(IConfiguration config, UserManager<ApplicationUser> userManager)
+    public TokenService(UserManager<ApplicationUser> userManager, IOptions<JwtConfiguration> jwtConfig)
     {
-        _config = config;
         _userManager = userManager;
+        _jwtConfig = jwtConfig.Value;
     }
 
     public async Task<string> CreateTokenAsync(ApplicationUser user)
@@ -25,10 +29,10 @@ public sealed class TokenService : ITokenService
         var credentials = GetSigningCredentials();
 
         var tokenOptions = new JwtSecurityToken(
-            issuer: _config["JwtSettings:ValidIssuer"],
-            audience: _config["JwtSettings:ValidAudience"],
+            issuer: _jwtConfig.ValidIssuer,
+            audience: _jwtConfig.ValidAudience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(_config.GetSection("JwtSettings:ExpiresInMinutes").Get<double>()),
+            expires: DateTime.Now.AddMinutes(_jwtConfig.ExpiresInMinutes),
             signingCredentials: credentials
         );
 
@@ -41,7 +45,7 @@ public sealed class TokenService : ITokenService
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Email, user.Email!),
+            new Claim(ClaimTypes.Email, user.Email),
         };
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -56,7 +60,7 @@ public sealed class TokenService : ITokenService
 
     private SigningCredentials GetSigningCredentials()
     {
-        var tokenKey = Encoding.UTF8.GetBytes(_config["JwtSettings:SecurityKey"]!);
+        var tokenKey = Encoding.UTF8.GetBytes(_jwtConfig.SecurityKey);
         var securityKey = new SymmetricSecurityKey(tokenKey);
 
         return new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha512Signature);

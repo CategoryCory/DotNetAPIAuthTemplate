@@ -1,5 +1,6 @@
 ﻿#nullable disable
 
+using JwtAuthTemplate.Configuration;
 using JwtAuthTemplate.Constants;
 using JwtAuthTemplate.Data.Models;
 using JwtAuthTemplate.Dtos;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace JwtAuthTemplate.Controllers;
@@ -19,18 +21,21 @@ public sealed class AccountController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly JwtConfiguration _jwtConfig;
     private readonly IConfiguration _config;
     private readonly ITokenService _tokenService;
 
     public AccountController(UserManager<ApplicationUser> userManager,
                              SignInManager<ApplicationUser> signInManager,
                              RoleManager<IdentityRole> roleManager,
+                             IOptions<JwtConfiguration> jwtConfig,
                              IConfiguration config,
                              ITokenService tokenService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
+        _jwtConfig = jwtConfig.Value;
         _config = config;
         _tokenService = tokenService;
     }
@@ -55,14 +60,14 @@ public sealed class AccountController : ControllerBase
 
         var token = await _tokenService.CreateTokenAsync(user);
 
-        Response.Cookies.Append(_config["JwtSettings:CookieName"],
+        Response.Cookies.Append(_jwtConfig.CookieName,
                                 token,
                                 new CookieOptions()
                                 {
                                     HttpOnly = true,
                                     Secure = true,
                                     SameSite = SameSiteMode.Strict,
-                                    Expires = DateTimeOffset.Now.AddMinutes(_config.GetSection("JwtSettings:ExpiresInMinutes").Get<int>())
+                                    Expires = DateTimeOffset.Now.AddMinutes(_jwtConfig.ExpiresInMinutes)
                                 });
 
         var userRoles = await _userManager.GetRolesAsync(user);
@@ -78,9 +83,9 @@ public sealed class AccountController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult Logout()
     {
-        if (string.IsNullOrEmpty(Request.Cookies[_config["JwtSettings:CookieName"]])) return BadRequest();
+        if (string.IsNullOrEmpty(Request.Cookies[_jwtConfig.CookieName])) return BadRequest();
 
-        Response.Cookies.Delete(_config["JwtSettings:CookieName"]);
+        Response.Cookies.Delete(_jwtConfig.CookieName);
 
         return NoContent();
     }

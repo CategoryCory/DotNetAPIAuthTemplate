@@ -1,4 +1,5 @@
-﻿using JwtAuthTemplate.Extensions;
+﻿using JwtAuthTemplate.Configuration;
+using JwtAuthTemplate.Extensions;
 
 namespace JwtAuthTemplate;
 
@@ -13,6 +14,8 @@ public sealed class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<JwtConfiguration>(_config.GetSection("JwtSettings"));
+
         services.ConfigureIISIntegration();
         services.ConfigureDatabase(_config);
         services.ConfigureIdentity(_config);
@@ -21,7 +24,7 @@ public sealed class Startup
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
 
-        services.ConfigureLocalServices();
+        services.ConfigureLocalServices(_config);
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

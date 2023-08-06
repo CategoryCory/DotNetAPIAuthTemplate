@@ -1,4 +1,7 @@
-﻿using JwtAuthTemplate.Data;
+﻿#nullable disable
+
+using JwtAuthTemplate.Configuration;
+using JwtAuthTemplate.Data;
 using JwtAuthTemplate.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +25,7 @@ public static class ApplicationServiceExtensions
         return services;
     }
 
-    public static IServiceCollection ConfigureLocalServices(this IServiceCollection services)
+    public static IServiceCollection ConfigureLocalServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddScoped<ITokenService, TokenService>();
 

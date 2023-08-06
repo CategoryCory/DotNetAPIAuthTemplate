@@ -1,5 +1,6 @@
 ﻿#nullable disable
 
+using JwtAuthTemplate.Configuration;
 using JwtAuthTemplate.Data;
 using JwtAuthTemplate.Data.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,6 +14,9 @@ public static class IdentityServiceExtensions
 {
     public static IServiceCollection ConfigureIdentity(this IServiceCollection services, IConfiguration config)
     {
+        var jwtConfig= new JwtConfiguration();
+        config.GetSection("JwtSettings").Bind(jwtConfig);
+
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
             options.User.RequireUniqueEmail = true;
@@ -20,7 +24,7 @@ public static class IdentityServiceExtensions
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        var jwtSecret = config["JwtSettings:SecurityKey"];
+        var jwtSecret = jwtConfig.SecurityKey;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
         services.AddAuthentication(authOptions =>
@@ -36,8 +40,8 @@ public static class IdentityServiceExtensions
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = config["JwtSettings:ValidIssuer"],
-                    ValidAudience = config["JwtSettings:ValidAudience"],
+                    ValidIssuer = jwtConfig.ValidIssuer,
+                    ValidAudience = jwtConfig.ValidAudience,
                     IssuerSigningKey = key,
                     ClockSkew = TimeSpan.Zero,
                 };
@@ -48,7 +52,7 @@ public static class IdentityServiceExtensions
                 {
                     OnMessageReceived = context =>
                     {
-                        context.Token = context.Request.Cookies[config["JwtSettings:CookieName"]];
+                        context.Token = context.Request.Cookies[jwtConfig.CookieName];
                         return Task.CompletedTask;
                     }
                 };
